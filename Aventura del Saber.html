@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aventura del Saber - Juego Educativo 2do Ciclo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', 'Outfit', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .pixel-corners {
+            box-shadow: 0 8px 0 rgba(0, 0, 0, 0.2);
+        }
+        .btn-bounce:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+        }
+        /* Custom scrollbar for badges */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #8B5CF6;
+            border-radius: 10px;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(234, 179, 8, 0.8)); }
+            50% { filter: drop-shadow(0 0 20px rgba(234, 179, 8, 1)); }
+        }
+        .glow-gold {
+            animation: pulse-glow 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 h-screen w-screen overflow-hidden flex flex-col justify-between select-none">
+
+    <!-- Top Header Navigation Bar -->
+    <header class="bg-indigo-900 border-b-4 border-indigo-700 text-white px-4 py-2 flex items-center justify-between z-20 shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-amber-400 p-2 rounded-2xl text-indigo-950 font-black text-xl shadow-md flex items-center justify-center w-10 h-10 border-2 border-amber-200">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-lg sm:text-2xl tracking-wide bg-gradient-to-r from-amber-300 via-yellow-200 to-white bg-clip-text text-transparent">
+                    AVENTURA DEL SABER
+                </h1>
+                <p class="text-xs text-indigo-200 font-semibold hidden sm:block">Segundo Ciclo de Primaria (4.º, 5.º y 6.º)</p>
+            </div>
+        </div>
+
+        <!-- Dynamic Game Stats Bar -->
+        <div id="header-stats" class="hidden flex items-center space-x-3 sm:space-x-6 bg-indigo-950/80 px-4 py-1.5 rounded-2xl border border-indigo-700">
+            <!-- Vidas -->
+            <div class="flex items-center space-x-1" title="Vidas">
+                <i class="fa-solid fa-heart text-red-500 text-lg sm:text-xl animate-pulse"></i>
+                <span id="stat-lives" class="font-black text-base sm:text-lg text-white">3</span>
+            </div>
+            <!-- Puntos -->
+            <div class="flex items-center space-x-1" title="Puntos">
+                <i class="fa-solid fa-star text-amber-400 text-lg sm:text-xl"></i>
+                <span id="stat-score" class="font-black text-base sm:text-lg text-amber-300">0</span>
+            </div>
+            <!-- Monedas / Sabiduría -->
+            <div class="flex items-center space-x-1" title="Gemas de Conocimiento">
+                <i class="fa-solid fa-gem text-cyan-400 text-lg sm:text-xl"></i>
+                <span id="stat-gems" class="font-black text-base sm:text-lg text-cyan-200">0</span>
+            </div>
+            <!-- Nivel/Materia -->
+            <div id="materia-badge" class="hidden md:flex items-center space-x-1.5 bg-indigo-800 px-3 py-0.5 rounded-full text-xs font-bold text-amber-200 border border-indigo-600">
+                <i id="materia-icon" class="fa-solid fa-book"></i>
+                <span id="materia-name">Matemáticas</span>
+            </div>
+        </div>
+
+        <!-- Controls / Audio Toggle -->
+        <div class="flex items-center space-x-2">
+            <button id="btn-audio" onclick="game.toggleAudio()" class="bg-indigo-800 hover:bg-indigo-700 text-amber-300 p-2 rounded-xl border-2 border-indigo-600 transition btn-bounce">
+                <i id="audio-icon" class="fa-solid fa-volume-high text-lg"></i>
+            </button>
+            <button id="btn-pause" onclick="game.togglePause()" class="hidden bg-indigo-800 hover:bg-indigo-700 text-white p-2 rounded-xl border-2 border-indigo-600 transition btn-bounce">
+                <i class="fa-solid fa-pause text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="relative flex-1 w-full h-full bg-slate-900 flex items-center justify-center overflow-hidden">
+
+        <!-- GAME CANVAS -->
+        <canvas id="gameCanvas" class="w-full h-full block bg-slate-950 cursor-pointer"></canvas>
+
+        <!-- SCREEN: START MENU -->
+        <div id="screen-start" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-gradient-to-b from-indigo-950/90 via-slate-900/95 to-indigo-950/90 backdrop-blur-md">
+            <div class="max-w-2xl w-full glass-panel p-6 sm:p-8 rounded-3xl border-4 border-indigo-400/50 shadow-2xl text-center relative overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl"></div>
+                <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+
+                <div class="inline-block bg-amber-400 text-indigo-950 text-xs sm:text-sm font-black px-4 py-1 rounded-full uppercase tracking-wider mb-2 shadow-sm">
+                    ⚡ ¡Aprende Jugando en Tiempo Real!
+                </div>
+
+                <h2 class="text-3xl sm:text-5xl font-black text-indigo-950 tracking-wide mb-2">
+                    AVENTURA DEL SABER
+                </h2>
+                <p class="text-slate-600 text-sm sm:text-base font-semibold max-w-lg mx-auto mb-6">
+                    Explora mundos mágicos, esquiva obstáculos, recolecta gemas y resuelve desafíos de tu grado escolar.
+                </p>
+
+                <!-- Avatar Selection -->
+                <div class="mb-6 bg-indigo-50/80 p-4 rounded-2xl border border-indigo-100">
+                    <label class="block text-indigo-900 font-bold text-sm mb-3">
+                        <i class="fa-solid fa-user-ninja mr-1 text-indigo-600"></i> Elige a tu Héroe/Heroína:
+                    </label>
+                    <div class="flex justify-center items-center space-x-4 sm:space-x-8">
+                        <!-- Hero 1 -->
+                        <button onclick="game.selectAvatar('Alex')" id="avatar-btn-Alex" class="avatar-option group relative p-3 rounded-2xl border-4 border-indigo-500 bg-white hover:scale-105 transition shadow-lg">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center text-4xl sm:text-5xl bg-amber-100 rounded-xl">
+                                👦🏻
+                            </div>
+                            <span class="block text-xs font-bold text-indigo-900 mt-2">Alex</span>
+                        </button>
+                        <!-- Hero 2 -->
+                        <button onclick="game.selectAvatar('Sofia')" id="avatar-btn-Sofia" class="avatar-option group relative p-3 rounded-2xl border-4 border-transparent bg-white/70 hover:bg-white hover:scale-105 transition shadow-md">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center text-4xl sm:text-5xl bg-pink-100 rounded-xl">
+                                👧🏽
+                            </div>
+                            <span class="block text-xs font-bold text-indigo-900 mt-2">Sofía</span>
+                        </button>
+                        <!-- Hero 3 -->
+                        <button onclick="game.selectAvatar('Leo')" id="avatar-btn-Leo" class="avatar-option group relative p-3 rounded-2xl border-4 border-transparent bg-white/70 hover:bg-white hover:scale-105 transition shadow-md">
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center text-4xl sm:text-5xl bg-emerald-100 rounded-xl">
+                                🧑🏼‍🦱
+                            </div>
+                            <span class="block text-xs font-bold text-indigo-900 mt-2">Leo</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grade / Level Selection -->
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <button onclick="game.setGrade(4)" id="grade-btn-4" class="grade-option py-2.5 px-2 rounded-xl font-black text-xs sm:text-sm border-2 border-indigo-600 bg-indigo-600 text-white shadow-md transition">
+                        📘 4.º Grado
+                    </button>
+                    <button onclick="game.setGrade(5)" id="grade-btn-5" class="grade-option py-2.5 px-2 rounded-xl font-black text-xs sm:text-sm border-2 border-indigo-200 bg-white text-indigo-900 hover:bg-indigo-50 shadow-sm transition">
+                        📗 5.º Grado
+                    </button>
+                    <button onclick="game.setGrade(6)" id="grade-btn-6" class="grade-option py-2.5 px-2 rounded-xl font-black text-xs sm:text-sm border-2 border-indigo-200 bg-white text-indigo-900 hover:bg-indigo-50 shadow-sm transition">
+                        📙 6.º Grado
+                    </button>
+                </div>
+
+                <!-- Start Button -->
+                <button onclick="game.startNewGame()" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xl sm:text-2xl font-black rounded-2xl border-b-4 border-emerald-800 shadow-xl transition transform hover:-translate-y-0.5 active:translate-y-1 btn-bounce flex items-center justify-center space-x-3">
+                    <i class="fa-solid fa-play"></i>
+                    <span>¡INICIAR AVENTURA!</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN: INTERACTIVE QUIZ MODAL -->
+        <div id="modal-quiz" class="hidden absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <div class="max-w-xl w-full bg-white rounded-3xl border-4 border-amber-400 shadow-2xl p-6 relative overflow-hidden transform transition-all scale-100">
+                
+                <!-- Quiz Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <span id="quiz-subject-tag" class="bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-lightbulb text-amber-600"></i>
+                        <span>Desafío de Conocimiento</span>
+                    </span>
+                    <div class="flex items-center space-x-1 text-slate-500 text-sm font-extrabold bg-slate-100 px-3 py-1 rounded-full">
+                        <i class="fa-regular fa-clock text-indigo-600"></i>
+                        <span id="quiz-timer">15s</span>
+                    </div>
+                </div>
+
+                <!-- Question Box -->
+                <div class="bg-indigo-900 text-white p-5 rounded-2xl shadow-inner mb-6 text-center border-2 border-indigo-700">
+                    <p id="quiz-question-text" class="text-base sm:text-xl font-bold leading-relaxed">
+                        ¿Cargando pregunta del Segundo Ciclo?
+                    </p>
+                </div>
+
+                <!-- Options Grid -->
+                <div id="quiz-options-container" class="grid grid-cols-1 gap-3 mb-4">
+                    <!-- Dynamic Buttons Inserted by JS -->
+                </div>
+
+                <!-- Feedback Message -->
+                <div id="quiz-feedback" class="hidden p-3 rounded-xl text-center font-black text-sm transition animate-bounce"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN: PAUSE MENU -->
+        <div id="modal-pause" class="hidden absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+            <div class="max-w-md w-full glass-panel p-6 rounded-3xl border-4 border-indigo-400 text-center shadow-2xl">
+                <h3 class="text-3xl font-black text-indigo-950 mb-4">JUEGO EN PAUSA</h3>
+                <p class="text-slate-600 font-bold mb-6 text-sm">Tómate un descanso. ¡Tu aventura te espera!</p>
+                
+                <div class="space-y-3">
+                    <button onclick="game.togglePause()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-lg rounded-xl shadow-md border-b-4 border-indigo-800 transition btn-bounce">
+                        <i class="fa-solid fa-play mr-2"></i> CONTINUAR
+                    </button>
+                    <button onclick="game.showStartScreen()" class="w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-lg rounded-xl border-b-4 border-slate-400 transition btn-bounce">
+                        <i class="fa-solid fa-house mr-2"></i> MENÚ PRINCIPAL
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: GAME OVER / VICTORY -->
+        <div id="modal-end" class="hidden absolute inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+            <div class="max-w-md w-full bg-white p-6 sm:p-8 rounded-3xl border-4 border-amber-400 text-center shadow-2xl relative">
+                <div id="end-icon-container" class="w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-4 bg-amber-100 text-amber-600 border-2 border-amber-300">
+                    🏆
+                </div>
+                <h3 id="end-title" class="text-3xl font-black text-indigo-950 mb-2">¡NIVEL COMPLETADO!</h3>
+                <p id="end-subtitle" class="text-slate-600 text-sm font-semibold mb-6">Demostraste un gran dominio del conocimiento.</p>
+
+                <!-- Stats summary -->
+                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 mb-6 grid grid-cols-2 gap-4">
+                    <div class="text-center">
+                        <span class="block text-xs text-slate-500 font-bold uppercase">Puntaje Final</span>
+                        <span id="end-score" class="text-2xl font-black text-indigo-900">0</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-xs text-slate-500 font-bold uppercase">Preguntas Acertadas</span>
+                        <span id="end-correct" class="text-2xl font-black text-emerald-600">0/0</span>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <button onclick="game.restartCurrentLevel()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-black text-lg rounded-xl border-b-4 border-emerald-700 shadow-md transition btn-bounce">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> JUGAR DE NUEVO
+                    </button>
+                    <button onclick="game.showStartScreen()" class="w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-base rounded-xl transition border-b-4 border-slate-300 btn-bounce">
+                        <i class="fa-solid fa-list mr-2"></i> CAMBIAR MATERIA / GRADO
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- On-Screen Touch Controls for Mobile/Tablet -->
+        <div id="touch-controls" class="absolute bottom-4 inset-x-4 z-20 flex justify-between items-center pointer-events-none md:hidden">
+            <!-- Left/Right Directional Buttons -->
+            <div class="flex space-x-3 pointer-events-auto">
+                <button id="btn-touch-left" class="w-16 h-16 bg-indigo-900/80 active:bg-indigo-600 border-2 border-indigo-400/60 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg backdrop-blur-sm">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <button id="btn-touch-right" class="w-16 h-16 bg-indigo-900/80 active:bg-indigo-600 border-2 border-indigo-400/60 rounded-2xl flex items-center justify-center text-white text-2xl shadow-lg backdrop-blur-sm">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+            <!-- Jump Button -->
+            <div class="pointer-events-auto">
+                <button id="btn-touch-jump" class="w-20 h-20 bg-amber-500/90 active:bg-amber-400 border-4 border-amber-200 rounded-full flex items-center justify-center text-slate-950 text-3xl font-black shadow-xl backdrop-blur-sm glow-gold">
+                    🚀
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Instruction Bar -->
+    <footer class="bg-indigo-950 border-t border-indigo-800 text-indigo-300 text-xs py-2 px-4 flex justify-between items-center z-10">
+        <div class="flex items-center space-x-4">
+            <span class="hidden sm:inline font-bold text-amber-300">🎮 Controles:</span>
+            <span class="hidden sm:inline"><b>[←] [→] / [A] [D]</b> Moverse</span>
+            <span class="hidden sm:inline"><b>[ESPACIO] / [W] / [↑]</b> Saltar</span>
+            <span class="sm:hidden">Toca los botones en pantalla para moverte y saltar</span>
+        </div>
+        <div class="font-semibold text-slate-400">
+            <span>Diseñado para Educación Primaria</span>
+        </div>
+    </footer>
+
+    <script>
+        // Web Audio Synthesizer for retro sound effects
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playCoin() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(1200, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playCorrect() {
+                if (this.muted || !this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.08 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.08);
+                    osc.stop(this.ctx.currentTime + idx * 0.08 + 0.15);
+                });
+            }
+
+            playWrong() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+        }
+
+        // Question Database for 2nd Cycle Primary School (Grades 4, 5, 6)
+        const QUESTION_BANK = {
+            4: [
+                {
+                    subject: 'Matemáticas',
+                    icon: 'fa-calculator',
+                    color: 'text-blue-600',
+                    q: '¿Cuál es el resultado de multiplicar 12 × 8?',
+                    options: ['86', '96', '108', '94'],
+                    correct: 1
+                },
+                {
+                    subject: 'Matemáticas',
+                    icon: 'fa-shapes',
+                    color: 'text-blue-600',
+                    q: '¿Cómo se llama un polígono que tiene 5 lados?',
+                    options: ['Hexágono', 'Cuadrilátero', 'Pentágono', 'Octágono'],
+                    correct: 2
+                },
+                {
+                    subject: 'Ciencias Naturales',
+                    icon: 'fa-seedling',
+                    color: 'text-emerald-600',
+                    q: '¿Cómo fabrican las plantas su propio alimento?',
+                    options: ['Por respiración', 'Por fotosíntesis', 'Por digestión', 'Por evaporación'],
+                    correct: 1
+                },
+                {
+                    subject: 'Lengua Española',
+                    icon: 'fa-book-open',
+                    color: 'text-amber-600',
+                    q: 'En la frase "El perro rápido corre", la palabra "rápido" es un:',
+                    options: ['Sustantivo', 'Verbo', 'Adjetivo', 'Artículo'],
+                    correct: 2
+                },
+                {
+                    subject: 'Ciencias Sociales',
+                    icon: 'fa-earth-americas',
+                    color: 'text-purple-600',
+                    q: '¿Cuál es el planeta que habitamos?',
+                    options: ['Marte', 'Tierra', 'Júpiter', 'Venus'],
+                    correct: 1
+                }
+            ],
+            5: [
+                {
+                    subject: 'Matemáticas',
+                    icon: 'fa-calculator',
+                    color: 'text-blue-600',
+                    q: '¿Qué fracción es equivalente a 2/4?',
+                    options: ['1/3', '1/2', '3/4', '2/8'],
+                    correct: 1
+                },
+                {
+                    subject: 'Ciencias Naturales',
+                    icon: 'fa-heart-pulse',
+                    color: 'text-emerald-600',
+                    q: '¿Cuál es la función principal del corazón en el cuerpo humano?',
+                    options: ['Filtrar el aire', 'Bombear la sangre', 'Digerir comida', 'Producir huesos'],
+                    correct: 1
+                },
+                {
+                    subject: 'Lengua Española',
+                    icon: 'fa-spell-check',
+                    color: 'text-amber-600',
+                    q: '¿Cuál es el antónimo (opuesto) de la palabra "Constante"?',
+                    options: ['Perseverante', 'Inconstante', 'Firme', 'Seguro'],
+                    correct: 1
+                },
+                {
+                    subject: 'Ciencias Sociales',
+                    icon: 'fa-globe',
+                    color: 'text-purple-600',
+                    q: '¿Cuál es el continente más extenso del planeta Tierra?',
+                    options: ['Europa', 'África', 'Asia', 'Oceanía'],
+                    correct: 2
+                },
+                {
+                    subject: 'Matemáticas',
+                    icon: 'fa-ruler',
+                    color: 'text-blue-600',
+                    q: 'Si un triángulo tiene sus 3 lados iguales, se clasifica como:',
+                    options: ['Isósceles', 'Escaleno', 'Equilátero', 'Rectángulo'],
+                    correct: 2
+                }
+            ],
+            6: [
+                {
+                    subject: 'Matemáticas',
+                    icon: 'fa-percent',
+                    color: 'text-blue-600',
+                    q: '¿Cuál es el 25% de 200?',
+                    options: ['25', '40', '50', '100'],
+                    correct: 2
+                },
+                {
+                    subject: 'Ciencias Naturales',
+                    icon: 'fa-atom',
+                    color: 'text-emerald-600',
+                    q: '¿Cuál es el planeta más grande del Sistema Solar?',
+                    options: ['Saturno', 'Neptuno', 'Tierra', 'Júpiter'],
+                    correct: 3
+                },
+                {
+                    subject: 'Lengua Española',
+                    icon: 'fa-pen-nib',
+                    color: 'text-amber-600',
+                    q: 'Las palabras agudas llevan tilde cuando terminan en:',
+                    options: ['Cualquier vocal o consonante', 'N, S o Vocal', 'Consonante diferente de N o S', 'Z o L'],
+                    correct: 1
+                },
+                {
+                    subject: 'Ciencias Sociales',
+                    icon: 'fa-landmark',
+                    color: 'text-purple-600',
+                    q: '¿Qué línea imaginaria divide la Tierra en Hemisferio Norte y Hemisferio Sur?',
+                    options: ['Trópico de Cáncer', 'Meridiano de Greenwich', 'Ecuador', 'Círculo Polar'],
+                    correct: 2
+                },
+                {
+                    subject: 'Ciencias Naturales',
+                    icon: 'fa-leaf',
+                    color: 'text-emerald-600',
+                    q: 'Los seres vivos que se alimentan de plantas y carne son:',
+                    options: ['Herbívoros', 'Carnívoros', 'Omnívoros', 'Descomponedores'],
+                    correct: 2
+                }
+            ]
+        };
+
+        class GameEngine {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.sound = new SoundFX();
+
+                // Game state
+                this.selectedAvatar = 'Alex';
+                this.avatarEmojis = { Alex: '👦🏻', Sofia: '👧🏽', Leo: '🧑🏼‍🦱' };
+                this.selectedGrade = 4;
+                this.score = 0;
+                this.gems = 0;
+                this.lives = 3;
+                this.correctAnswersCount = 0;
+                this.totalQuestionsAnswered = 0;
+                this.isRunning = false;
+                this.isPaused = false;
+                this.inQuiz = false;
+
+                // Physics & World constants
+                this.gravity = 0.65;
+                this.levelWidth = 3200;
+                this.cameraX = 0;
+
+                // Player character properties
+                this.player = {
+                    x: 100,
+                    y: 200,
+                    width: 48,
+                    height: 56,
+                    vx: 0,
+                    vy: 0,
+                    speed: 6,
+                    jumpForce: -13.5,
+                    isGrounded: false,
+                    facingRight: true
+                };
+
+                // World elements arrays
+                this.platforms = [];
+                this.gemsList = [];
+                this.portals = [];
+                this.clouds = [];
+                this.particles = [];
+
+                // Quiz State
+                this.currentQuestionIndex = 0;
+                this.quizTimer = null;
+                this.quizTimeLeft = 15;
+
+                // Input Handling
+                this.keys = {};
+                
+                this.initEvents();
+                this.resizeCanvas();
+            }
+
+            resizeCanvas() {
+                this.canvas.width = this.canvas.parentElement.clientWidth;
+                this.canvas.height = this.canvas.parentElement.clientHeight;
+            }
+
+            initEvents() {
+                window.addEventListener('resize', () => this.resizeCanvas());
+
+                // Keyboard events
+                window.addEventListener('keydown', (e) => {
+                    this.sound.init();
+                    this.keys[e.code] = true;
+                    if (['Space', 'ArrowUp', 'ArrowDown', 'KeyW', 'KeyS'].includes(e.code)) {
+                        e.preventDefault();
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+
+                // Touch screen control bindings
+                const bindTouch = (elemId, keyCode) => {
+                    const btn = document.getElementById(elemId);
+                    if (!btn) return;
+                    btn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        this.sound.init();
+                        this.keys[keyCode] = true;
+                    });
+                    btn.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        this.keys[keyCode] = false;
+                    });
+                };
+
+                bindTouch('btn-touch-left', 'ArrowLeft');
+                bindTouch('btn-touch-right', 'ArrowRight');
+                bindTouch('btn-touch-jump', 'Space');
+            }
+
+            selectAvatar(name) {
+                this.selectedAvatar = name;
+                document.querySelectorAll('.avatar-option').forEach(btn => {
+                    btn.classList.remove('border-indigo-500', 'bg-white');
+                    btn.classList.add('border-transparent', 'bg-white/70');
+                });
+                const activeBtn = document.getElementById(`avatar-btn-${name}`);
+                if (activeBtn) {
+                    activeBtn.classList.remove('border-transparent', 'bg-white/70');
+                    activeBtn.classList.add('border-indigo-500', 'bg-white');
+                }
+            }
+
+            setGrade(grade) {
+                this.selectedGrade = grade;
+                document.querySelectorAll('.grade-option').forEach(btn => {
+                    btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600');
+                    btn.classList.add('bg-white', 'text-indigo-900', 'border-indigo-200');
+                });
+                const activeBtn = document.getElementById(`grade-btn-${grade}`);
+                if (activeBtn) {
+                    activeBtn.classList.remove('bg-white', 'text-indigo-900', 'border-indigo-200');
+                    activeBtn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600');
+                }
+            }
+
+            toggleAudio() {
+                this.sound.muted = !this.sound.muted;
+                const icon = document.getElementById('audio-icon');
+                if (this.sound.muted) {
+                    icon.className = 'fa-solid fa-volume-xmark text-red-300';
+                } else {
+                    icon.className = 'fa-solid fa-volume-high text-amber-300';
+                }
+            }
+
+            togglePause() {
+                if (!this.isRunning || this.inQuiz) return;
+                this.isPaused = !this.isPaused;
+                document.getElementById('modal-pause').classList.toggle('hidden', !this.isPaused);
+            }
+
+            showStartScreen() {
+                this.isRunning = false;
+                this.isPaused = false;
+                this.inQuiz = false;
+                document.getElementById('screen-start').classList.remove('hidden');
+                document.getElementById('modal-pause').classList.add('hidden');
+                document.getElementById('modal-end').classList.add('hidden');
+                document.getElementById('modal-quiz').classList.add('hidden');
+                document.getElementById('header-stats').classList.add('hidden');
+                document.getElementById('btn-pause').classList.add('hidden');
+            }
+
+            startNewGame() {
+                this.sound.init();
+                this.score = 0;
+                this.gems = 0;
+                this.lives = 3;
+                this.correctAnswersCount = 0;
+                this.totalQuestionsAnswered = 0;
+                this.currentQuestionIndex = 0;
+                this.isRunning = true;
+                this.isPaused = false;
+                this.inQuiz = false;
+
+                // UI updates
+                document.getElementById('screen-start').classList.add('hidden');
+                document.getElementById('modal-end').classList.add('hidden');
+                document.getElementById('header-stats').classList.remove('hidden');
+                document.getElementById('btn-pause').classList.remove('hidden');
+                this.updateStatsUI();
+
+                // Build Level map
+                this.buildLevel();
+
+                // Reset player position
+                this.player.x = 80;
+                this.player.y = 100;
+                this.player.vx = 0;
+                this.player.vy = 0;
+
+                // Start animation loop
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            buildLevel() {
+                this.platforms = [];
+                this.gemsList = [];
+                this.portals = [];
+                this.clouds = [];
+
+                const groundY = this.canvas.height - 70;
+
+                // Ground platforms with gaps
+                let currX = 0;
+                while (currX < this.levelWidth) {
+                    const width = 400 + Math.random() * 300;
+                    this.platforms.push({ x: currX, y: groundY, width: width, height: 100, isGround: true });
+                    
+                    // Add elevated floating platforms
+                    for (let i = 0; i < 2; i++) {
+                        const platX = currX + 100 + i * 200;
+                        const platY = groundY - (100 + Math.random() * 120);
+                        this.platforms.push({ x: platX, y: platY, width: 140, height: 24, isGround: false });
+
+                        // Add gems on floating platforms
+                        this.gemsList.push({
+                            x: platX + 50,
+                            y: platY - 35,
+                            width: 24,
+                            height: 24,
+                            collected: false
+                        });
+                    }
+
+                    // Gap length
+                    currX += width + (120 + Math.random() * 60);
+                }
+
+                // Add quiz portals across the level
+                const questions = QUESTION_BANK[this.selectedGrade];
+                const portalSpacing = this.levelWidth / (questions.length + 1);
+                
+                questions.forEach((q, idx) => {
+                    this.portals.push({
+                        x: portalSpacing * (idx + 1),
+                        y: groundY - 120,
+                        width: 60,
+                        height: 90,
+                        questionData: q,
+                        visited: false,
+                        pulse: 0
+                    });
+                });
+
+                // Decorative background clouds
+                for (let i = 0; i < 20; i++) {
+                    this.clouds.push({
+                        x: Math.random() * this.levelWidth,
+                        y: 30 + Math.random() * (this.canvas.height / 2),
+                        speed: 0.3 + Math.random() * 0.5,
+                        size: 30 + Math.random() * 40
+                    });
+                }
+            }
+
+            gameLoop() {
+                if (!this.isRunning) return;
+
+                if (!this.isPaused && !this.inQuiz) {
+                    this.updatePhysics();
+                }
+
+                this.render();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            updatePhysics() {
+                // Horizontal Movement
+                if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+                    this.player.vx = this.player.speed;
+                    this.player.facingRight = true;
+                } else if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+                    this.player.vx = -this.player.speed;
+                    this.player.facingRight = false;
+                } else {
+                    this.player.vx *= 0.7; // friction
+                }
+
+                // Jump
+                if ((this.keys['Space'] || this.keys['ArrowUp'] || this.keys['KeyW']) && this.player.isGrounded) {
+                    this.player.vy = this.player.jumpForce;
+                    this.player.isGrounded = false;
+                    this.sound.playJump();
+                }
+
+                // Apply gravity
+                this.player.vy += this.gravity;
+
+                // Update position
+                this.player.x += this.player.vx;
+                this.player.y += this.player.vy;
+
+                // Level Bounds
+                if (this.player.x < 0) this.player.x = 0;
+                if (this.player.x > this.levelWidth - this.player.width) {
+                    this.player.x = this.levelWidth - this.player.width;
+                }
+
+                // Platform collisions
+                this.player.isGrounded = false;
+                this.platforms.forEach(plat => {
+                    // Top collision
+                    if (
+                        this.player.x + this.player.width > plat.x &&
+                        this.player.x < plat.x + plat.width &&
+                        this.player.y + this.player.height >= plat.y &&
+                        this.player.y + this.player.height <= plat.y + 20 &&
+                        this.player.vy >= 0
+                    ) {
+                        this.player.y = plat.y - this.player.height;
+                        this.player.vy = 0;
+                        this.player.isGrounded = true;
+                    }
+                });
+
+                // Check fall off map
+                if (this.player.y > this.canvas.height + 100) {
+                    this.takeDamage();
+                }
+
+                // Gems collection
+                this.gemsList.forEach(gem => {
+                    if (!gem.collected && this.checkOverlap(this.player, gem)) {
+                        gem.collected = true;
+                        this.gems += 1;
+                        this.score += 50;
+                        this.sound.playCoin();
+                        this.updateStatsUI();
+                        this.spawnParticles(gem.x, gem.y, '#FBBF24', 8);
+                    }
+                });
+
+                // Quiz Portal triggering
+                this.portals.forEach(portal => {
+                    if (!portal.visited && this.checkOverlap(this.player, portal)) {
+                        this.triggerQuiz(portal);
+                    }
+                });
+
+                // Update Camera to follow player smoothly
+                const targetCameraX = this.player.x - this.canvas.width / 3;
+                this.cameraX += (targetCameraX - this.cameraX) * 0.1;
+                if (this.cameraX < 0) this.cameraX = 0;
+                if (this.cameraX > this.levelWidth - this.canvas.width) {
+                    this.cameraX = this.levelWidth - this.canvas.width;
+                }
+
+                // Update cloud positions
+                this.clouds.forEach(c => {
+                    c.x -= c.speed;
+                    if (c.x < -100) c.x = this.levelWidth + 100;
+                });
+
+                // Update floating particles
+                this.particles.forEach((p, index) => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= 0.02;
+                    if (p.alpha <= 0) this.particles.splice(index, 1);
+                });
+            }
+
+            checkOverlap(rect1, rect2) {
+                return (
+                    rect1.x < rect2.x + rect2.width &&
+                    rect1.x + rect1.width > rect2.x &&
+                    rect1.y < rect2.y + rect2.height &&
+                    rect1.y + rect1.height > rect2.y
+                );
+            }
+
+            takeDamage() {
+                this.lives--;
+                this.sound.playWrong();
+                this.updateStatsUI();
+
+                if (this.lives <= 0) {
+                    this.finishGame(false);
+                } else {
+                    // Respawn player
+                    this.player.x = Math.max(100, this.player.x - 200);
+                    this.player.y = 100;
+                    this.player.vx = 0;
+                    this.player.vy = 0;
+                }
+            }
+
+            triggerQuiz(portal) {
+                portal.visited = true;
+                this.inQuiz = true;
+
+                const modal = document.getElementById('modal-quiz');
+                const subjectTag = document.getElementById('quiz-subject-tag');
+                const qText = document.getElementById('quiz-question-text');
+                const optionsContainer = document.getElementById('quiz-options-container');
+                const feedback = document.getElementById('quiz-feedback');
+
+                feedback.classList.add('hidden');
+                modal.classList.remove('hidden');
+
+                const data = portal.questionData;
+                subjectTag.innerHTML = `<i class="fa-solid ${data.icon} ${data.color}"></i> <span>${data.subject}</span>`;
+                qText.textContent = data.q;
+
+                optionsContainer.innerHTML = '';
+                data.options.forEach((opt, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full py-3.5 px-4 bg-slate-100 hover:bg-indigo-100 text-slate-800 font-bold rounded-2xl border-2 border-slate-200 transition text-left text-sm sm:text-base flex items-center justify-between btn-bounce';
+                    btn.innerHTML = `<span>${opt}</span> <i class="fa-regular fa-circle text-slate-400"></i>`;
+                    btn.onclick = () => this.answerQuiz(idx, data.correct, btn);
+                    optionsContainer.appendChild(btn);
+                });
+
+                // Timer setup
+                this.quizTimeLeft = 15;
+                document.getElementById('quiz-timer').textContent = `${this.quizTimeLeft}s`;
+                clearInterval(this.quizTimer);
+                this.quizTimer = setInterval(() => {
+                    this.quizTimeLeft--;
+                    document.getElementById('quiz-timer').textContent = `${this.quizTimeLeft}s`;
+                    if (this.quizTimeLeft <= 0) {
+                        clearInterval(this.quizTimer);
+                        this.answerQuiz(-1, data.correct, null);
+                    }
+                }, 1000);
+            }
+
+            answerQuiz(selectedIdx, correctIdx, btnElement) {
+                clearInterval(this.quizTimer);
+                this.totalQuestionsAnswered++;
+
+                const feedback = document.getElementById('quiz-feedback');
+                feedback.classList.remove('hidden');
+
+                if (selectedIdx === correctIdx) {
+                    this.sound.playCorrect();
+                    this.score += 200;
+                    this.gems += 5;
+                    this.correctAnswersCount++;
+                    
+                    if (btnElement) {
+                        btnElement.className = 'w-full py-3.5 px-4 bg-emerald-500 text-white font-bold rounded-2xl border-2 border-emerald-600 transition text-left text-sm sm:text-base flex items-center justify-between';
+                    }
+
+                    feedback.className = 'p-3 rounded-xl text-center font-black text-sm bg-emerald-100 text-emerald-800 border border-emerald-300';
+                    feedback.textContent = '🎉 ¡CORRECTO! +200 Puntos';
+                } else {
+                    this.sound.playWrong();
+                    if (btnElement) {
+                        btnElement.className = 'w-full py-3.5 px-4 bg-red-500 text-white font-bold rounded-2xl border-2 border-red-600 transition text-left text-sm sm:text-base flex items-center justify-between';
+                    }
+
+                    feedback.className = 'p-3 rounded-xl text-center font-black text-sm bg-red-100 text-red-800 border border-red-300';
+                    feedback.textContent = '❌ ¡Ups! Inténtalo en el próximo portal';
+                }
+
+                this.updateStatsUI();
+
+                setTimeout(() => {
+                    document.getElementById('modal-quiz').classList.add('hidden');
+                    this.inQuiz = false;
+
+                    // Check level completion if all portals visited
+                    const allVisited = this.portals.every(p => p.visited);
+                    if (allVisited) {
+                        this.finishGame(true);
+                    }
+                }, 1500);
+            }
+
+            finishGame(isVictory) {
+                this.isRunning = false;
+                const modalEnd = document.getElementById('modal-end');
+                const title = document.getElementById('end-title');
+                const subtitle = document.getElementById('end-subtitle');
+                const icon = document.getElementById('end-icon-container');
+
+                if (isVictory) {
+                    title.textContent = '¡NIVEL SUPERADO!';
+                    subtitle.textContent = `¡Excelente trabajo! Has completado la aventura de ${this.selectedGrade}.º grado.`;
+                    icon.textContent = '🏆';
+                    this.sound.playCorrect();
+                } else {
+                    title.textContent = '¡FIN DEL JUEGO!';
+                    subtitle.textContent = '¡No te rindas! Vuelve a intentarlo y supera tus conocimientos.';
+                    icon.textContent = '💔';
+                }
+
+                document.getElementById('end-score').textContent = this.score;
+                document.getElementById('end-correct').textContent = `${this.correctAnswersCount}/${this.totalQuestionsAnswered}`;
+
+                modalEnd.classList.remove('hidden');
+            }
+
+            updateStatsUI() {
+                document.getElementById('stat-lives').textContent = this.lives;
+                document.getElementById('stat-score').textContent = this.score;
+                document.getElementById('stat-gems').textContent = this.gems;
+            }
+
+            spawnParticles(x, y, color, count) {
+                for (let i = 0; i < count; i++) {
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: (Math.random() - 0.5) * 6,
+                        vy: (Math.random() - 0.5) * 6,
+                        color: color,
+                        alpha: 1.0
+                    });
+                }
+            }
+
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Background Gradient
+                const bgGradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                bgGradient.addColorStop(0, '#0F172A'); // Slate 900
+                bgGradient.addColorStop(1, '#1E1B4B'); // Indigo 950
+                this.ctx.fillStyle = bgGradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.ctx.save();
+                this.ctx.translate(-this.cameraX, 0);
+
+                // Render Background Clouds
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                this.clouds.forEach(c => {
+                    this.ctx.beginPath();
+                    this.ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+                    this.ctx.arc(c.x + c.size * 0.6, c.y - c.size * 0.2, c.size * 0.8, 0, Math.PI * 2);
+                    this.ctx.arc(c.x - c.size * 0.6, c.y - c.size * 0.2, c.size * 0.8, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+
+                // Render Platforms
+                this.platforms.forEach(plat => {
+                    if (plat.isGround) {
+                        // Ground Platform
+                        this.ctx.fillStyle = '#10B981'; // Top grass emerald
+                        this.ctx.fillRect(plat.x, plat.y, plat.width, 16);
+                        
+                        this.ctx.fillStyle = '#065F46'; // Dirt layer
+                        this.ctx.fillRect(plat.x, plat.y + 16, plat.width, plat.height - 16);
+                    } else {
+                        // Floating Block
+                        this.ctx.fillStyle = '#6366F1'; // Indigo floating block
+                        this.ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+
+                        this.ctx.fillStyle = '#818CF8';
+                        this.ctx.fillRect(plat.x, plat.y, plat.width, 6);
+                    }
+                });
+
+                // Render Gems
+                this.gemsList.forEach(gem => {
+                    if (!gem.collected) {
+                        this.ctx.fillStyle = '#F59E0B'; // Amber Gem
+                        this.ctx.beginPath();
+                        this.ctx.arc(gem.x + 12, gem.y + 12, 10, 0, Math.PI * 2);
+                        this.ctx.fill();
+
+                        this.ctx.fillStyle = '#FEF08A';
+                        this.ctx.beginPath();
+                        this.ctx.arc(gem.x + 10, gem.y + 10, 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                });
+
+                // Render Portals
+                this.portals.forEach(portal => {
+                    portal.pulse += 0.05;
+                    const glowScale = Math.sin(portal.pulse) * 4;
+
+                    this.ctx.fillStyle = portal.visited ? '#64748B' : '#EC4899'; // Pink if active
+                    this.ctx.fillRect(portal.x, portal.y, portal.width, portal.height);
+
+                    // Inner Portal Gate
+                    this.ctx.fillStyle = portal.visited ? '#334155' : '#F472B6';
+                    this.ctx.fillRect(portal.x + 8, portal.y + 8, portal.width - 16, portal.height - 16);
+
+                    // Portal Icon
+                    this.ctx.font = '24px sans-serif';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(portal.visited ? '✔️' : '⭐', portal.x + portal.width / 2, portal.y + portal.height / 2 + 8);
+                });
+
+                // Render Particles
+                this.particles.forEach(p => {
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.globalAlpha = p.alpha;
+                    this.ctx.fillRect(p.x, p.y, 6, 6);
+                });
+                this.ctx.globalAlpha = 1.0;
+
+                // Render Player Character
+                const p = this.player;
+                this.ctx.font = '42px sans-serif';
+                this.ctx.textAlign = 'center';
+                
+                // Flip player emoji based on direction
+                this.ctx.save();
+                this.ctx.translate(p.x + p.width / 2, p.y + p.height / 2);
+                if (!p.facingRight) {
+                    this.ctx.scale(-1, 1);
+                }
+                this.ctx.fillText(this.avatarEmojis[this.selectedAvatar], 0, 14);
+                this.ctx.restore();
+
+                this.ctx.restore();
+            }
+        }
+
+        // Initialize Game Engine on Window Load
+        let game = null;
+        window.addEventListener('load', () => {
+            game = new GameEngine();
+        });
+    </script>
+</body>
+</html>
